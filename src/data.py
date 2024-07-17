@@ -22,7 +22,7 @@ REDIS_PASSWORD = ""
 class DataService():
     def __init__(self):
         # 레디스에 연결
-        self.redis_client = redis.Reids(
+        self.redis_client = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
             password=REDIS_PASSWORD
@@ -67,7 +67,7 @@ class DataService():
             key = f"{PREFIX}:{str(embedding['id'])}"
             embedding["vector"] = np.array(embedding["vector"], dtyp=np.float32).tobytes()
             self.redis_client.hset(key, mapping=embedding)
-        print(f"Loaded {self.redis_client.info()["db0"]['keys']} documents in Redis search index with name: {INDEX_NAME}")
+        print(f"Loaded {self.redis_client.info()['db0']['keys']} documents in Redis search index with name: {INDEX_NAME}")
 
     def pdf_to_embeddings(self, pdf_path: str, chunk_length: int=1000):
         # PDF에서 데이터 읽어서 chunk로 분리
