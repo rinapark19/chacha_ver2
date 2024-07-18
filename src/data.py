@@ -7,6 +7,7 @@ from redis.commands.search.field import TextField, VectorField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
 import redis
+import redis.exceptions
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -17,7 +18,6 @@ DISTANCE_METRIC = "COSINE" # IP, L2
 
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
-REDIS_PASSWORD = ""
 
 class DataService():
     def __init__(self):
@@ -25,8 +25,14 @@ class DataService():
         self.redis_client = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
-            password=REDIS_PASSWORD
+            decode_responses=True
         )
+
+        try:
+            self.redis_client.ping()
+            print(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
+        except redis.exceptions.ConnectionError as e:
+            print(f"Failed to connect to Redis: {e}")
     
     def drop_redis_data(self, index_name: str = INDEX_NAME):
         # 인덱스 제거
@@ -74,7 +80,7 @@ class DataService():
         reader = PdfReader(pdf_path)
         chunks = []
 
-        for page in reader.pages:
+        for page in reader.pages: # tqdm 추가
             text_page = page.extract_text()
             chunks.extend([text_page[i:i+chunk_length].replace("\n", "") for i in range(0, len(text_page), chunk_length)])
 
