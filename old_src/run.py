@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
-from old_version.intent import IntentService
-from old_version.response import ResponseService
-from old_version.data import DataService
+from old_src.intent import IntentService
+from old_src.response import ResponseService
+from old_src.data import DataService
 
 load_dotenv()
 
