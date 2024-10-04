@@ -1,2 +1,4 @@
 .env
 .streamlit/
+memo.txt
+src/__pycache__/

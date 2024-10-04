@@ -14,7 +14,7 @@ from langchain.tools.retriever import create_retriever_tool
 from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-from langchain_community.chat_message_histories.firestore import FirestoreChatMessageHistory
+from langchain.schema import HumanMessage
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -63,24 +63,13 @@ def get_tool(retriever, model_name="gpt-4-1106-preview"):
 
 def get_agent(system_message, tools, model_name="gpt-4-1106-preview"):
     llm = ChatOpenAI(
-        model_name = "gpt-4-1106-preview",
+        model_name = "gpt-4",
         temperature=1
     )
     
-    firestore_config = {
-            "collection_name": "chathistory",
-            "session_id": 1,
-            "user_id": 1,
-    }
-    
-    chat_history = FirestoreChatMessageHistory(**firestore_config)
-    
     memory = ConversationBufferMemory(
         memory_key="chat_history",
-        input_key="input",
-        return_message=True,
-        output_key="output",
-        chat_memory=chat_history
+        return_messages=True
     )
     
     agent = initialize_agent(
@@ -125,15 +114,15 @@ class persona_agent:
     def receive_chat(self, chat):
         while True:
             start_time = time.time()
-            result = self.agent(chat)
+            result = self.agent.run(chat)
             end_time = time.time()
             
             response_time = end_time - start_time
-            answer = result["output"]
-            return answer
+            #answer = result["output"]
+            return result
         
 if __name__ == "__main__":
     pdf_list = ["data/spiderman1.pdf", "data/spiderman2.pdf"]
     agent = persona_agent(pdf_list)
     
-    agent.receive_chat("안녕")
+    print(agent.receive_chat("안녕"))
