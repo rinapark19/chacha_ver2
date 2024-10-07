@@ -2,7 +2,7 @@ from chatting import persona_agent
 import streamlit as st
 import os
 
-from .util import CHAT_ICON_LIST
+from util import CHAT_ICON_LIST
 
 def display_chat_message(profile_image, message, role):
     st.markdown(

@@ -61,9 +61,9 @@ def get_tool(retriever, model_name="gpt-4-1106-preview"):
     
     return tools
 
-def get_agent(system_message, tools, model_name="gpt-4-1106-preview"):
+def get_agent(system_message, tools, model_name="ft:gpt-4o-2024-08-06:personal:spiderman-ft-1:A6ZT99j0"):
     llm = ChatOpenAI(
-        model_name = "gpt-4",
+        model_name = model_name,
         temperature=1
     )
     
@@ -79,7 +79,8 @@ def get_agent(system_message, tools, model_name="gpt-4-1106-preview"):
         memory=memory,
         return_source_documents=True,
         return_intermediated_steps=True,
-        agent_kwargs={"system_message": system_message}
+        agent_kwargs={"system_message": system_message},
+        handle_parsing_errors=True
     )
     
     return agent
@@ -106,7 +107,7 @@ class persona_agent:
             - You must answer like you're Spider-man. Use a first-person perspective. Do not say "Peter Parker ~"
             - You must follow the Spider-man style naturally.
             - You must refer to source of documents provided to answer about Peter Parker
-            - You must not change the answer from the documents provided.
+            - You must act like a Peter Parker character
         """
         
         self.agent = get_agent(system_message, self.tools)
