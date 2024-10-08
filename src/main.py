@@ -13,13 +13,7 @@ def display_chat_message(profile_image, message, role):
         unsafe_allow_html=True
     )
 
-def chat_page():
-    
-    pdf_list = ["data/spiderman1.pdf", "data/spiderman2.pdf"]
-    agent = persona_agent(pdf_list)
-    
-    st.title("ChaCha ver2 - 캐릭터와 대화하기")
-
+def chat_page(agent, char):
     # 메세지 초기화
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -44,13 +38,35 @@ def chat_page():
         st.session_state.messages.append({
             "role": "assistant",
             "content": assistant_response,
-            "profile_image": CHAT_ICON_LIST["peter parker"]
+            "profile_image": CHAT_ICON_LIST[char]
         })
-        display_chat_message(CHAT_ICON_LIST["peter parker"], assistant_response, "assistant")
+        display_chat_message(CHAT_ICON_LIST[char], assistant_response, "assistant")
 
 def main():
+    st.title("ChaCha ver2 - 캐릭터와 대화하기")
+
+    st.sidebar.title("캐릭터 선택")
+    selected_char = st.sidebar.selectbox(
+        "대화할 캐릭터를 선택하세요",
+        ["스파이더맨(피터 파커)",
+        "전우치",
+        "신짱구"]
+    )
+
+    if selected_char == "스파이더맨(피터 파커)":
+        pdf_list = ["data/spiderman1.pdf", "data/spiderman2.pdf"]
+        char = "pp"
+    elif selected_char == "전우치":
+        pdf_list = ["data/jwc.pdf"]
+        char = "jwc"
+    elif selected_char == "신짱구":
+        pdf_list = ["data/szg1.pdf", "data/szg2.pdf"]
+        char = "szg"
+
+    agent = persona_agent(pdf_list, char)
+
     os.environ["OPENAI_API_KEY"] = st.secrets["openai_key"]
-    chat_page()
+    chat_page(agent, char)
 
 if __name__ == "__main__":
     main()

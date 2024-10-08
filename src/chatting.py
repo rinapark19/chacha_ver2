@@ -8,16 +8,16 @@ import time
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain import hub
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA, LLMChain
-from langchain.tools.retriever import create_retriever_tool
 from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import HumanMessage
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+from util import MODEL_LIST, PROMPT_LIST
 
 def chunking(pdf_list, n, chunk_length=2048):
     chunks = []
@@ -41,12 +41,15 @@ def get_tool(retriever, model_name="gpt-4-1106-preview"):
     prompt = hub.pull("rlm/rag-prompt")
     rag_llm = ChatOpenAI(
         model_name=model_name,
+        temperature=0
     )
     
     qa_chain = RetrievalQA.from_chain_type(
         llm=rag_llm,
         retriever=retriever,
-        chain_type_kwargs={"prompt": prompt}
+        chain_type_kwargs={"prompt": prompt},
+        verbose = True,
+        return_source_documents=True
     )
     
     tools = [
@@ -61,7 +64,7 @@ def get_tool(retriever, model_name="gpt-4-1106-preview"):
     
     return tools
 
-def get_agent(system_message, tools, model_name="ft:gpt-4o-2024-08-06:personal:spiderman-ft-1:A6ZT99j0"):
+def get_agent(system_message, tools, model_name):
     llm = ChatOpenAI(
         model_name = model_name,
         temperature=1
@@ -69,6 +72,8 @@ def get_agent(system_message, tools, model_name="ft:gpt-4o-2024-08-06:personal:s
     
     memory = ConversationBufferMemory(
         memory_key="chat_history",
+        input_key="input",
+        output_key="output",
         return_messages=True
     )
     
@@ -86,31 +91,12 @@ def get_agent(system_message, tools, model_name="ft:gpt-4o-2024-08-06:personal:s
     return agent
     
 class persona_agent:
-    def __init__(self, pdf_list) -> None:
+    def __init__(self, pdf_list, char) -> None:
         self.chunks = chunking(pdf_list, len(pdf_list))
         self.retrieve = get_retriever(self.chunks)
-        self.tools = get_tool(self.retrieve)
-        
-        system_message = """
-            You will act as a Spider-man(Peter Parker) character and answer the user's questions
-
-            You can refer to the following information about Spider-man
-            - Characteristic: The protagonist of The Amazing Spider-man, real name is Peter Parker.
-            - Personality: Cheerful, cheeky, witty, brave, kind, and friendly.
-            - Line: '무슨 신, 반짝이 신?', '아니, 널 지켜 주려고 그랬던 거야.', '걱정하지 마, 괜찮을 거야.', '비상사다리 타고. 별거 아니던걸, 뭐.' 
-
-            You should follow the guidelines below:
-            - If the answer isn't available within in the context, state the fact.
-            - Otherwise, answer to your best capability, referring to source of documents provided.
-            - Limit responses to three or four sentences for clarity and conciseness.
-            - You must answer in Korean.
-            - You must answer like you're Spider-man. Use a first-person perspective. Do not say "Peter Parker ~"
-            - You must follow the Spider-man style naturally.
-            - You must refer to source of documents provided to answer about Peter Parker
-            - You must act like a Peter Parker character
-        """
-        
-        self.agent = get_agent(system_message, self.tools)
+        self.tools = get_tool(self.retrieve, MODEL_LIST[char])
+        system_message = PROMPT_LIST[char]
+        self.agent = get_agent(system_message, self.tools, MODEL_LIST[char])
     
     def receive_chat(self, chat):
         while True:
@@ -119,11 +105,11 @@ class persona_agent:
             end_time = time.time()
             
             response_time = end_time - start_time
-            #answer = result["output"]
             return result
         
 if __name__ == "__main__":
-    pdf_list = ["data/spiderman1.pdf", "data/spiderman2.pdf"]
-    agent = persona_agent(pdf_list)
+    pdf_list = ["data/rag_data/jwc.pdf"]
+    char = "jwc"
+    agent = persona_agent(pdf_list, char)
     
-    print(agent.receive_chat("안녕"))
+    print(agent.receive_chat("넌 누구야?"))
