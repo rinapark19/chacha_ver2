@@ -2,3 +2,4 @@
 .streamlit/
 memo.txt
 src/__pycache__/
+data/rag_data/spiderman_vs
