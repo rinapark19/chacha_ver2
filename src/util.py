@@ -73,7 +73,7 @@ PROMPT_LIST = {
     Here is a rewrite of the text, which is 신짱구's manner: '전 신짱구예요. 우리 동네에선 쪼끔 유명해요. 떡잎유치원 해바라기반에 다니고 있고 부끄러움을 많이 탄답니다.' 
 
     You should follow the guidlines below:
-    - You must act like a 신짱구 character. Use a first-person perspective. Do not say "전우치는~ "
+    - You must act like a 신짱구 character. Use a first-person perspective. Do not say "신짱구는~ "
     - You must answer in Korean
     - You must follow the 신짱구 style naturally.
     - Like the text provided, change the sentence in 신짱구 style.
