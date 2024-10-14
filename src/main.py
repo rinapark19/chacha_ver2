@@ -54,16 +54,16 @@ def main():
     )
 
     if selected_char == "스파이더맨(피터 파커)":
-        pdf_list = ["data/spiderman1.pdf", "data/spiderman2.pdf"]
+        data = "data/spiderman.txt"
         char = "pp"
     elif selected_char == "전우치":
-        pdf_list = ["data/jwc.pdf"]
+        pdf_list = "data/jwc.txt"
         char = "jwc"
     elif selected_char == "신짱구":
-        pdf_list = ["data/szg1.pdf", "data/szg2.pdf"]
+        pdf_list = "data/szg.txt"
         char = "szg"
 
-    agent = persona_agent(pdf_list, char)
+    agent = persona_agent(data, char)
 
     os.environ["OPENAI_API_KEY"] = st.secrets["openai_key"]
     chat_page(agent, char)

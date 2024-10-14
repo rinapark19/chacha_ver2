@@ -14,28 +14,49 @@ from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.storage import LocalFileStore
+from langchain.embeddings import CacheBackedEmbeddings
+from langchain_community.document_transformers import EmbeddingsRedundantFilter
+from langchain.retrievers.document_compressors import EmbeddingsFilter, DocumentCompressorPipeline
+from langchain.retrievers import ContextualCompressionRetriever
+
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 from util import MODEL_LIST, PROMPT_LIST
 
-def chunking(pdf_list, n, chunk_length=2048):
-    chunks = []
-    for i in range(n):
-        reader = PdfReader(pdf_list[i])
-        
-        for page in reader.pages:
-            text_page = page.extract_text()
-            chunks.extend([text_page[i: i+chunk_length] for i in range(0, len(text_page), chunk_length)])
-            
-    return chunks
-
-def get_retriever(chunks, embedding_model="text-embedding-ada-002", retrieve_function="similarity"):
-    embeddings = OpenAIEmbeddings(model=embedding_model)
-    vectorstore = FAISS.from_texts(chunks, embeddings)
-    retriever = vectorstore.as_retriever()
+def chunking(data):
+    with open(data, "r", encoding="utf-8") as f:
+        file = f.read()
     
-    return retriever
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=10)
+    return text_splitter.split_text(file)
+
+def get_cached_embedder():
+    underlying_embeddings = OpenAIEmbeddings()
+    store = LocalFileStore("data/cache/")
+    return CacheBackedEmbeddings.from_bytes_store(underlying_embeddings, store, namespace=underlying_embeddings.model)
+
+def get_vectorstore(chunks, embedder):
+    return FAISS.from_texts(chunks, embedder)
+
+def get_retriever(embedder, vectorstore):
+    splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=20)
+    redundant_filter = EmbeddingsRedundantFilter(embeddings=embedder)
+    relevant_filter = EmbeddingsFilter(embeddings=embedder, similarity_threshold=0.76)
+
+    pipeline_compressor = DocumentCompressorPipeline(
+        transformers=[splitter, redundant_filter, relevant_filter]
+    )
+
+    retriever = vectorstore.as_retriever()
+    compression_retriever = ContextualCompressionRetriever(
+        base_compressor=pipeline_compressor, base_retriever=retriever
+    )
+
+    return compression_retriever
+
 
 def get_tool(retriever, model_name="gpt-4-1106-preview"):
     prompt = hub.pull("rlm/rag-prompt")
@@ -92,9 +113,11 @@ def get_agent(system_message, tools, model_name):
     
 class persona_agent:
     def __init__(self, pdf_list, char) -> None:
-        self.chunks = chunking(pdf_list, len(pdf_list))
-        self.retrieve = get_retriever(self.chunks)
-        self.tools = get_tool(self.retrieve, MODEL_LIST[char])
+        self.chunks = chunking(pdf_list)
+        self.embedder = get_cached_embedder()
+        self.vectorstore = get_vectorstore(self.chunks, self.embedder)
+        self.retriever = get_retriever(self.embedder, self.vectorstore)
+        self.tools = get_tool(self.retriever, MODEL_LIST[char])
         system_message = PROMPT_LIST[char]
         self.agent = get_agent(system_message, self.tools, MODEL_LIST[char])
     
@@ -108,8 +131,8 @@ class persona_agent:
             return result
         
 if __name__ == "__main__":
-    pdf_list = ["data/rag_data/jwc.pdf"]
+    data = "data/rag_data/spiderman.txt"
     char = "jwc"
-    agent = persona_agent(pdf_list, char)
+    agent = persona_agent(data, char)
     
     print(agent.receive_chat("넌 누구야?"))
