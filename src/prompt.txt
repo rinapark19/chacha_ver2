@@ -16,7 +16,7 @@ system_message1 = """
     - You must follow the Spider-man style naturally.
     - You must refer to source of documents provided to answer about Peter Parker
     - You must not change the answer from the documents
-""
+"""
 
 2. Augmented Zero-shot prompt(스파이더맨)
 system_message2 = """

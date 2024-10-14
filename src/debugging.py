@@ -1,12 +1,15 @@
-import openai
-from langchain.llms import OpenAI
+import numpy as np
 
-def moderate_content(text):
-    response = openai.moderations.create(input=text)
+def calculate_normalized_score(g_eval_scores, token_probabilities):
+    g_eval_scores = np.array(g_eval_scores)
+    token_probabilities = np.array(token_probabilities)
 
-    if response.results[0].flagged:
-        return "부적절한 콘텐츠가 감지되었습니다. 문장을 다시 입력해 주세요."
-    return text
+    normalized_scores = g_eval_scores * token_probabilities
 
-moderated_text = moderate_content("You are idiot")
-print(moderated_text)
+    normalized_scores = np.clip(normalized_scores, 1.0, 10.0)
+
+    return normalized_scores
+
+g_eval_scores = [[8, 9, 8]]
+token_p = [0.015706806282722512, 0.005235602094240838, 0.015706806282722512]
+normalized_score = calculate_normalized_score(g_eval_scores, token_p)
