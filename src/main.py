@@ -13,14 +13,37 @@ def display_chat_message(profile_image, message, role):
         unsafe_allow_html=True
     )
 
-def chat_page(agent, char):
+def chat_page(data, char):
     # 메세지 초기화
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        if char == "pp":
+            start_m = {
+                "role": char,
+                "content": "안녕, 어쩐 일이야?",
+                "profile_image": CHAT_ICON_LIST[char]
+            }
+        elif char == "jwc":
+            start_m = {
+                "role": char,
+                "content": "무슨 일이 있어서 왔는가?",
+                "profile_image": CHAT_ICON_LIST[char]
+            }
+        elif char == "szg":
+            start_m = {
+                "role": char,
+                "content": "호호이~ 짱구예요!",
+                "profile_image": CHAT_ICON_LIST[char]
+            }
+        st.session_state.messages = [start_m]
 
     # 기존 메세지 출력
     for msg in st.session_state.messages:
-        display_chat_message(msg["profile_image"], msg["content"], msg["role"])
+        if char != msg["role"] and msg["role"] != "user":
+            st.session_state.messages = []
+        else:
+            display_chat_message(msg["profile_image"], msg["content"], msg["role"])
+
+    agent = persona_agent(data, char)
     
     # 새 인풋에 대한 출력 생성
     if prompt := st.chat_input("메세지를 입력하세요..."):
@@ -36,11 +59,11 @@ def chat_page(agent, char):
 
         assistant_response = agent.receive_chat(prompt)
         st.session_state.messages.append({
-            "role": "assistant",
+            "role": char,
             "content": assistant_response,
             "profile_image": CHAT_ICON_LIST[char]
         })
-        display_chat_message(CHAT_ICON_LIST[char], assistant_response, "assistant")
+        display_chat_message(CHAT_ICON_LIST[char], assistant_response, char)
 
 def main():
     st.title("ChaCha ver2 - 캐릭터와 대화하기")
@@ -57,16 +80,14 @@ def main():
         data = "data/spiderman.txt"
         char = "pp"
     elif selected_char == "전우치":
-        pdf_list = "data/jwc.txt"
+        data = "data/jwc.txt"
         char = "jwc"
     elif selected_char == "신짱구":
-        pdf_list = "data/szg.txt"
+        data = "data/szg.txt"
         char = "szg"
 
-    agent = persona_agent(data, char)
-
     os.environ["OPENAI_API_KEY"] = st.secrets["openai_key"]
-    chat_page(agent, char)
+    chat_page(data, char)
 
 if __name__ == "__main__":
     main()

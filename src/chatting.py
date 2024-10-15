@@ -11,7 +11,7 @@ from langchain import hub
 from langchain_community.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA, LLMChain
 from langchain.agents import initialize_agent, AgentType, Tool
-from langchain.prompts import PromptTemplate
+from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -59,7 +59,12 @@ def get_retriever(embedder, vectorstore):
 
 
 def get_tool(retriever, model_name="gpt-4-1106-preview"):
-    prompt = hub.pull("rlm/rag-prompt")
+    prompt = ChatPromptTemplate.from_template("""
+    You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
+    Question: {question} 
+    Context: {context} 
+    Answer:
+    """)
     rag_llm = ChatOpenAI(
         model_name=model_name,
         temperature=0
@@ -128,6 +133,7 @@ class persona_agent:
             end_time = time.time()
             
             response_time = end_time - start_time
+            print(response_time)
             return result
         
 if __name__ == "__main__":
