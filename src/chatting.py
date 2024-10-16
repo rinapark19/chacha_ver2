@@ -1,15 +1,12 @@
-from pypdf import PdfReader
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-import numpy as np
 import time
 
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
-from langchain import hub
 from langchain_community.chat_models import ChatOpenAI
-from langchain.chains import RetrievalQA, LLMChain
+from langchain.chains import RetrievalQA
 from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
@@ -31,6 +28,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 from util import MODEL_LIST, PROMPT_LIST
 
 def chunking(data):
+    ''' Recursive Character Splitter을 활용해 주어진 데이터를 청크로 분할 '''
     with open(data, "r", encoding="utf-8") as f:
         file = f.read()
     
@@ -38,15 +36,18 @@ def chunking(data):
     return text_splitter.split_text(file)
 
 def get_cached_embedder():
+    ''' Cached Backed Embeddings로 임베더 정의 '''
     underlying_embeddings = OpenAIEmbeddings()
     store = LocalFileStore("data/cache/")
     return CacheBackedEmbeddings.from_bytes_store(underlying_embeddings, store, namespace=underlying_embeddings.model)
 
 def get_vectorstore(chunks, embedder):
+    ''' 분할한 청크, 임베더로 벡터스토어 정의 '''
     return FAISS.from_texts(chunks, embedder)
 
 def get_retriever(embedder, vectorstore):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=20)
+    ''' retriever 파이프라인 구성 후 retriever 정의 '''
+    splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=5)
     redundant_filter = EmbeddingsRedundantFilter(embeddings=embedder)
     relevant_filter = EmbeddingsFilter(embeddings=embedder, similarity_threshold=0.76)
 
@@ -63,6 +64,7 @@ def get_retriever(embedder, vectorstore):
 
 
 def get_tool(retriever, model_name="gpt-4-1106-preview"):
+    ''' retriever로 QA chain 및 agent의 tool 정의 '''
     prompt = ChatPromptTemplate.from_template("""
     You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
     Question: {question} 
@@ -95,9 +97,11 @@ def get_tool(retriever, model_name="gpt-4-1106-preview"):
     return tools
 
 def get_agent(system_message, tools, model_name):
+    ''' agent 정의 '''
     llm = ChatOpenAI(
         model_name = model_name,
-        temperature=1
+        temperature=1,
+        streaming=True # agent 성능 개선
     )
     
     memory = ConversationBufferMemory(
@@ -114,13 +118,17 @@ def get_agent(system_message, tools, model_name):
         memory=memory,
         return_source_documents=True,
         return_intermediated_steps=True,
-        agent_kwargs={"system_message": system_message},
+        agent_kwargs={"system_message": system_message,
+                      "max_iteration": 3, # agent 성능 개선
+                      "max_execution_time": 10.0,
+                      "trip_intermediate_steps": 1},
         handle_parsing_errors=True
     )
     
     return agent
 
 def moderate_content(text):
+    ''' agent의 출력에서 폭력적/혐오적 표현 감지 '''
     response = openai.moderations.create(input=text, model="omni-moderation-latest")
     
     if response.results[0].flagged:
@@ -155,10 +163,3 @@ class persona_agent:
             response_time = end_time - start_time
             print(response_time)
             return result
-        
-if __name__ == "__main__":
-    data = "data/rag_data/spiderman.txt"
-    char = "jwc"
-    agent = persona_agent(data, char)
-    
-    print(agent.receive_chat("넌 누구야?"))

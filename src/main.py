@@ -5,6 +5,7 @@ import os
 from util import CHAT_ICON_LIST
 
 def display_chat_message(profile_image, message, role):
+    ''' Streamlit 채팅 UI를 HTML로 수정 후 채팅 내용을 화면에 표시 '''
     st.markdown(
         f'<div style="display: flex; align-items: center;">'
         f'<img src="{profile_image}" style="border-radius:50%; width: 30px; height: 30px; margin-right: 10px;">'
@@ -14,7 +15,9 @@ def display_chat_message(profile_image, message, role):
     )
 
 def chat_page(data, char):
-    # 메세지 초기화
+    ''' 대화 화면 구성 '''
+
+    # 캐릭터에 맞춰 메세지 초기화
     if "messages" not in st.session_state:
         if char == "pp":
             start_m = {
@@ -66,6 +69,7 @@ def chat_page(data, char):
         display_chat_message(CHAT_ICON_LIST[char], assistant_response, char)
 
 def main():
+    ''' 메인 화면 구성 '''
     st.title("ChaCha ver2 - 캐릭터와 대화하기")
 
     st.sidebar.title("캐릭터 선택")
