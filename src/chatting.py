@@ -21,6 +21,10 @@ from langchain_community.document_transformers import EmbeddingsRedundantFilter
 from langchain.retrievers.document_compressors import EmbeddingsFilter, DocumentCompressorPipeline
 from langchain.retrievers import ContextualCompressionRetriever
 
+import openai
+import json
+import re 
+
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -115,6 +119,22 @@ def get_agent(system_message, tools, model_name):
     )
     
     return agent
+
+def moderate_content(text):
+    response = openai.moderations.create(input=text, model="omni-moderation-latest")
+    
+    if response.results[0].flagged:
+        return "부적절한 콘텐츠가 감지되었습니다. 문장을 다시 입력해 주세요."
+    
+    with open("data/badwords.json", "r", encoding="utf-8") as f:
+        json_data = f.read()
+    violent_words = json.loads(json_data)
+    
+    for word in violent_words:
+        if re.search(r'\b{}\b'.format(re.escape(word)), text, re.IGNORECASE):
+            return "부적절한 콘텐츠가 감지되었습니다. 문장을 다시 입력해 주세요."
+    
+    return text
     
 class persona_agent:
     def __init__(self, pdf_list, char) -> None:
