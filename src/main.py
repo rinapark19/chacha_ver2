@@ -48,7 +48,7 @@ def chat_page(data, char):
 
 def main():
     ''' 메인 화면 구성 '''
-    st.title("ChaCha ver2 - 캐릭터와 대화하기")
+    st.subheader("Langchain을 활용한 가상의 인격을 가진 캐릭터 챗봇 서비스 개발 데모")
 
     st.sidebar.title("캐릭터 선택")
     selected_char = st.sidebar.selectbox(
