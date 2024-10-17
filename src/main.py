@@ -2,7 +2,7 @@ from chatting import persona_agent
 import streamlit as st
 import os
 
-from util import CHAT_ICON_LIST
+from util import CHAT_ICON_LIST, START_LIST
 
 def display_chat_message(profile_image, message, role):
     ''' Streamlit 채팅 UI를 HTML로 수정 후 채팅 내용을 화면에 표시 '''
@@ -17,34 +17,12 @@ def display_chat_message(profile_image, message, role):
 def chat_page(data, char):
     ''' 대화 화면 구성 '''
 
-    # 캐릭터에 맞춰 메세지 초기화
     if "messages" not in st.session_state:
-        if char == "pp":
-            start_m = {
-                "role": char,
-                "content": "안녕, 어쩐 일이야?",
-                "profile_image": CHAT_ICON_LIST[char]
-            }
-        elif char == "jwc":
-            start_m = {
-                "role": char,
-                "content": "무슨 일이 있어서 왔는가?",
-                "profile_image": CHAT_ICON_LIST[char]
-            }
-        elif char == "szg":
-            start_m = {
-                "role": char,
-                "content": "호호이~ 짱구예요!",
-                "profile_image": CHAT_ICON_LIST[char]
-            }
-        st.session_state.messages = [start_m]
+        st.session_state.messages = [START_LIST[char]]
 
     # 기존 메세지 출력
     for msg in st.session_state.messages:
-        if char != msg["role"] and msg["role"] != "user":
-            st.session_state.messages = []
-        else:
-            display_chat_message(msg["profile_image"], msg["content"], msg["role"])
+        display_chat_message(msg["profile_image"], msg["content"], msg["role"])
 
     agent = persona_agent(data, char)
     
@@ -75,23 +53,31 @@ def main():
     st.sidebar.title("캐릭터 선택")
     selected_char = st.sidebar.selectbox(
         "대화할 캐릭터를 선택하세요",
-        ["스파이더맨(피터 파커)",
+        ["캐릭터 선택",
+        "스파이더맨(피터 파커)",
         "전우치",
         "신짱구"]
     )
 
-    if selected_char == "스파이더맨(피터 파커)":
-        data = "data/spiderman.txt"
-        char = "pp"
-    elif selected_char == "전우치":
-        data = "data/jwc.txt"
-        char = "jwc"
-    elif selected_char == "신짱구":
-        data = "data/szg.txt"
-        char = "szg"
+    if selected_char != "캐릭터 선택":
+        if selected_char == "스파이더맨(피터 파커)":
+            data = "data/spiderman.txt"
+            char = "pp"
+        elif selected_char == "전우치":
+            data = "data/jwc.txt"
+            char = "jwc"
+        elif selected_char == "신짱구":
+            data = "data/szg.txt"
+            char = "szg"
 
-    os.environ["OPENAI_API_KEY"] = st.secrets["openai_key"]
-    chat_page(data, char)
+        if "previous_char" not in st.session_state:
+            st.session_state.previous_char = selected_char
+        elif st.session_state.previous_char != selected_char:
+            st.session_state.messages = [START_LIST[char]]
+            st.session_state.previous_char = selected_char
+
+        os.environ["OPENAI_API_KEY"] = st.secrets["openai_key"]
+        chat_page(data, char)
 
 if __name__ == "__main__":
     main()

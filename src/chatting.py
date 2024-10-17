@@ -6,9 +6,9 @@ import time
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain_community.chat_models import ChatOpenAI
-from langchain.chains import RetrievalQA
-from langchain.agents import initialize_agent, AgentType, Tool
-from langchain.prompts import ChatPromptTemplate
+from langchain.chains import RetrievalQA, LLMChain
+from langchain.agents import initialize_agent, AgentType, Tool, AgentExecutor, ConversationalChatAgent
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -21,6 +21,8 @@ from langchain.retrievers import ContextualCompressionRetriever
 import openai
 import json
 import re 
+
+from langchain_core.exceptions import OutputParserException
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -80,8 +82,7 @@ def get_tool(retriever, model_name="gpt-4-1106-preview"):
         llm=rag_llm,
         retriever=retriever,
         chain_type_kwargs={"prompt": prompt},
-        verbose = True,
-        return_source_documents=True
+        verbose = True
     )
     
     tools = [
@@ -100,8 +101,7 @@ def get_agent(system_message, tools, model_name):
     ''' agent 정의 '''
     llm = ChatOpenAI(
         model_name = model_name,
-        temperature=1,
-        streaming=True # agent 성능 개선
+        temperature=1
     )
     
     memory = ConversationBufferMemory(
@@ -110,22 +110,36 @@ def get_agent(system_message, tools, model_name):
         output_key="output",
         return_messages=True
     )
+
+    prompt = ChatPromptTemplate.from_template(system_message)
+    llm_chain = LLMChain(llm=llm, prompt=prompt)
+
+    # agent = ConversationalChatAgent(
+    #     llm_chain=llm_chain,
+    #     tools=tools,
+    #     memory=memory,
+    #     return_intermediated_steps=True
+    # )
+
+    # agent_executor = AgentExecutor(
+    #     agent=agent,
+    #     tools=tools,
+    #     memory=memory,
+    #     handle_parsing_errors=True,
+    #     return_intermediated_steps=True
+    # )
     
-    agent = initialize_agent(
+    agent_executor = initialize_agent(
         agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
         tools=tools,
         llm=llm,
         memory=memory,
-        return_source_documents=True,
         return_intermediated_steps=True,
-        agent_kwargs={"system_message": system_message,
-                      "max_iteration": 3, # agent 성능 개선
-                      "max_execution_time": 10.0,
-                      "trip_intermediate_steps": 1},
+        agent_kwargs={"system_message": system_message},
         handle_parsing_errors=True
     )
     
-    return agent
+    return agent_executor
 
 def moderate_content(text):
     ''' agent의 출력에서 폭력적/혐오적 표현 감지 '''
@@ -143,6 +157,7 @@ def moderate_content(text):
             return "부적절한 콘텐츠가 감지되었습니다. 문장을 다시 입력해 주세요."
     
     return text
+
     
 class persona_agent:
     def __init__(self, pdf_list, char) -> None:
@@ -157,9 +172,20 @@ class persona_agent:
     def receive_chat(self, chat):
         while True:
             start_time = time.time()
-            result = self.agent.run(chat)
+            try:
+                response = self.agent.invoke({"input": chat})["output"]
+            except OutputParserException as e:
+              response = str(e)
+              if not response.startswith("Could not parse LLM output:"):
+                raise e
+            response = response.removeprefix("Could not parse LLM output:")
+            response = moderate_content(response)
             end_time = time.time()
             
             response_time = end_time - start_time
             print(response_time)
-            return result
+            return response
+        
+if __name__ == "__main__":
+    agent = persona_agent("src/data/spiderman.txt", "pp")
+    print(agent.receive_chat("웹 슈터는 어떻게 만들었어?"))
