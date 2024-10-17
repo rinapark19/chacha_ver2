@@ -3,7 +3,9 @@
 **서비스 소개**
 - RAG를 연결해 hallucination을 감소하고, 파인 튜닝과 프롬프트 엔지니어링을 활용해 캐릭터의 인격을 학습한 페르소나 챗봇 서비스입니다.
 
-**배포 링크**: https://lcchatbotdist-gniwdbu9jtvealn58eyl35.streamlit.app/
+**배포 링크**:
+- https://lcchatbotdist-gniwdbu9jtvealn58eyl35.streamlit.app/
+- 캐릭터 변경 시 메인 페이지(캐릭터 선택) 항목으로 돌아가야 벡터스토어가 초기화되어 적절한 답변을 생성합니다.
 
 **Skills & Frameworks**
 - Python
